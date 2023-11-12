@@ -80,7 +80,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                         .getFirstName());
                     break;
                 default:
-                    sendMessage(chatId, "");
+                    sendMessage(chatId, "sdfsdsf");
                     break;
             }
         }
