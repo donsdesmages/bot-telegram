@@ -1,2 +1,2 @@
 # bot-telegram
-bot-telegram-sender
+bot-telegram
