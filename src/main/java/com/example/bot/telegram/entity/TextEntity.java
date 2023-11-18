@@ -15,23 +15,19 @@ import javax.validation.constraints.NotNull;
 @ToString
 @EqualsAndHashCode
 @Configuration
-@Table(name = "tg_bot", schema = "public")
-public class UserEntity {
+@Table(name = "text_msg", schema = "public")
+public class TextEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     @NotNull
-    @Column(name = "email")
-    private String email;
-    @NotNull
-    @Column(name = "status")
-    private Boolean isActive;
+    @Column(name = "text")
+    private String text;
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private UserEntity user;
     @NotNull
     @Column(name = "state")
     @Enumerated(EnumType.STRING)
     private StateEnum stateEnum;
-    @NotNull
-    @OneToOne
-    private TextEntity textEntity;
-
 }

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence xmlns="http://xmlns.jcp.org/xml/ns/persistence"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/persistence http://xmlns.jcp.org/xml/ns/persistence/persistence_2_2.xsd"
+             version="2.2">
+<persistence-unit name="test" transaction-type="JTA">
+    <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider> <!-- Замените на провайдера, который вы используете -->
+    <class>com.example.bot.telegram.entity.UserEntity</class>
+    <class>com.example.bot.telegram.entity.TextEntity</class><!-- Замените на путь к вашему классу сущности -->
+    <properties>
+        <property name="javax.persistence.jdbc.url" value=" jdbc:postgresql://localhost:5433/postgres"/> <!-- URL вашей базы данных -->
+        <property name="javax.persistence.jdbc.user" value="postgres"/> <!-- Ваше имя пользователя БД -->
+        <property name="javax.persistence.jdbc.password" value="postgres"/> <!-- Ваш пароль к БД -->
+        <property name="javax.persistence.jdbc.driver" value="org.postgresql.Driver"/> <!-- Драйвер JDBC вашей базы данных -->
+        <property name="hibernate.dialect" value="org.hibernate.dialect.PostgreSQLDialect"/> <!-- Диалект для PostgreSQL -->
+        <!-- Другие настройки -->
+    </properties>
+</persistence-unit>
+</persistence>
+

@@ -1,6 +1,7 @@
 package com.example.bot.telegram.model;
 
 import com.example.bot.telegram.StateEnum;
+import com.example.bot.telegram.entity.TextEntity;
 import lombok.*;
 
 @Data

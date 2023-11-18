@@ -1,16 +1,20 @@
 package com.example.bot.telegram.bot;
 
-import com.example.bot.telegram.StateEnum;
 import com.example.bot.telegram.config.BotConfig;
+import com.example.bot.telegram.entity.TextEntity;
 import com.example.bot.telegram.entity.UserEntity;
 import com.example.bot.telegram.model.UserModel;
+import com.example.bot.telegram.repository.TextRepository;
 import com.example.bot.telegram.repository.UserRepository;
-import com.example.bot.telegram.service.ServiceEmailSender;
-import com.example.bot.telegram.service.ServiceICheckingMail;
+import com.example.bot.telegram.service.ServiceEmailSenderImpl;
+import com.example.bot.telegram.service.ServiceFindFromDatabaseImpl;
+import com.example.bot.telegram.service.ServiceICheckingMailImpl;
 
+import com.example.bot.telegram.util.ConstantsUI;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -25,13 +29,19 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.example.bot.telegram.StateEnum.WAIT_IN_PROCESS;
+
+@Slf4j
 @Component
-@AllArgsConstructor
 @JsonDeserialize
+@AllArgsConstructor
 public class TelegramBot extends TelegramLongPollingBot {
 
     private final BotConfig botConfig;
     private final UserRepository userRepository;
+    private final TextRepository textRepository;
+    private final ServiceFindFromDatabaseImpl serviceFindFromDatabase;
+    private final ServiceEmailSenderImpl serviceEmailSender;
 
     private static final String START = "/start";
     private static final String SENDING_AT_MAIL = "Отправить";
@@ -40,28 +50,27 @@ public class TelegramBot extends TelegramLongPollingBot {
     @SneakyThrows
     @Override
     public void onUpdateReceived(Update update) {
-       String letter = "";
+        String letter = "";
 
         if(update.hasMessage() && update.getMessage().hasText()) {
             String messageText = update.getMessage().getText();
             long chatId = update.getMessage().getChatId();
+
+            if (messageText.contains("/mail")) {
+                String mailFromUser = messageText.substring(messageText.indexOf(" "));
+                letter = ServiceICheckingMailImpl.validateTextFromUser(mailFromUser);
+                if (letter.equals(ConstantsUI.MAIL_VERIFICATION_IS_SUCCESSFULLY)) {
+                    saveEmail(mailFromUser);
+                }
+                sendMessage(chatId, letter);
+            }
 
             if (messageText.contains("/create")) {
                 String sendTo = messageText.substring(messageText.indexOf(" "));
                 if (!sendTo.isEmpty() && sendTo != null) {
                     saveText(sendTo);
                 }
-                sendMessage(chatId, "Отлично! " +
-                    "Текст был создан, " +
-                    "теперь нажмите кнопку Отправить");
-            }
-            if (messageText.contains("/mail")) {
-                String mailFromUser = messageText.substring(messageText.indexOf(" "));
-                letter = ServiceICheckingMail.validateTextFromUser(mailFromUser);
-                if (letter.equals(ServiceICheckingMail.MAIL_VERIFICATION_IS_SUCCESSFULLY)) {
-                    saveEmail(mailFromUser);
-                }
-                sendMessage(chatId, letter);
+                sendMessage(chatId, ConstantsUI.TEXT_WAS_CREATED);
             }
             switch (messageText) {
                 case START:
@@ -70,7 +79,9 @@ public class TelegramBot extends TelegramLongPollingBot {
                         .getFirstName());
                     break;
                 case SENDING_AT_MAIL:
-                    ServiceEmailSender.sendToEmail();
+                    serviceFindFromDatabase.findEmail();
+                    serviceFindFromDatabase.findText();
+                    serviceEmailSender.sendToEmail();
                     messageSuccessfullySendToMail(chatId, update.getMessage()
                         .getText());
                     break;
@@ -80,16 +91,15 @@ public class TelegramBot extends TelegramLongPollingBot {
                         .getFirstName());
                     break;
                 default:
-                    sendMessage(chatId, "sdfsdsf");
+                    sendMessage(chatId, "");
                     break;
             }
         }
     }
 
-    protected String saveEmail(String email) {
+    protected void saveEmail(String email) {
         UserModel model = UserModel.builder()
-            .stateEnum(StateEnum.BASIC_STATE)
-            .isActive(false)
+            .stateEnum(WAIT_IN_PROCESS)
             .email(email)
             .build();
 
@@ -99,24 +109,27 @@ public class TelegramBot extends TelegramLongPollingBot {
         userData.setStateEnum(model.getStateEnum());
 
         userRepository.save(userData);
-        return "User data successfully";
+        log.info("User data successfully...");
     }
 
-    protected String saveText(String textFromUser) {
-        UserModel userModel = UserModel.builder().text(textFromUser).build();
+    protected void saveText(String textFromUser) {
+        UserModel userModel = UserModel.builder()
+            .stateEnum(WAIT_IN_PROCESS)
+            .text(textFromUser)
+            .build();
 
-        UserEntity userEntity = new UserEntity();
-        userEntity.setText(userModel.getText());
+        TextEntity textEntity = new TextEntity();
+        textEntity.setText(userModel.getText());
 
-        userRepository.save(userEntity);
-        return "Data was successfully saved";
+        textRepository.save(textEntity);
+        log.info("Text was successfully saved...");
     }
 
     @Bean
     public List<KeyboardButton> keyboardButtons() {
         List<KeyboardButton> buttons = new ArrayList<>();
         buttons.add(new KeyboardButton(SENDING_AT_MAIL));
-        buttons.add(new KeyboardButton("Главное меню"));
+        buttons.add(new KeyboardButton(HEAD_MENU));
         return buttons;
     }
 
@@ -141,12 +154,13 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
     private void startCommandReceived(Long chatId, String name) {
-        String answer = "Здравствуйте, " + name + ", рад знакомству с вами!" + "\n" +
-            "Я помогаю людям отправлять письма на почту не выходя из телеграмма, далее будет краткая инструкция по использованию." + "\n" +
-            "\n" +
-            " 1. C помощью команды /mail, укажите адрес человека которому планируете отправить сообщение," +
-            "\n" + " например: '/mail ivanov_ivan@gmail.com' " + "\n" + "  " + "\n" +
-            " 2. Если почта указана верно, вас попросят составить письмо для отправки ";
+        String answer = "Здравствуйте, " + name + ", рад знакомству!" + "\n" +
+            "Я помогаю людям отправлять письма на почту не выходя из телеграмма." + "\n" +
+            "\n"  + "Вот краткая инструкция :"
+            + "\n" + "\n" +
+            "  C помощью команды /mail укажите адрес человека,которому " + "\n"
+            + "    планируете отправить сообщение." +
+            "\n" + "    Например: '/mail ivanov_ivan@gmail.com' ";
         sendMessage(chatId, answer);
     }
 
