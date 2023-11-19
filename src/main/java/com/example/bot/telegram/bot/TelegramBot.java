@@ -1,14 +1,16 @@
 package com.example.bot.telegram.bot;
 
+import com.example.bot.telegram.StateEnum;
 import com.example.bot.telegram.config.BotConfig;
 import com.example.bot.telegram.entity.TextEntity;
 import com.example.bot.telegram.entity.UserEntity;
 import com.example.bot.telegram.model.UserModel;
 import com.example.bot.telegram.repository.TextRepository;
 import com.example.bot.telegram.repository.UserRepository;
-import com.example.bot.telegram.service.ServiceEmailSenderImpl;
-import com.example.bot.telegram.service.ServiceFindFromDatabaseImpl;
-import com.example.bot.telegram.service.ServiceICheckingMailImpl;
+import com.example.bot.telegram.service.CheckingTheServiceServiceImpl;
+import com.example.bot.telegram.service.EmailSenderServiceImpl;
+import com.example.bot.telegram.service.FindFromDataBaseServiceImpl;
+import com.example.bot.telegram.service.CheckingMailServiceImpl;
 
 import com.example.bot.telegram.util.ConstantsUI;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
@@ -30,6 +32,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.example.bot.telegram.StateEnum.WAIT_IN_PROCESS;
+import static com.example.bot.telegram.util.ConstantsUI.OK_STATUS;
 
 @Slf4j
 @Component
@@ -40,8 +43,9 @@ public class TelegramBot extends TelegramLongPollingBot {
     private final BotConfig botConfig;
     private final UserRepository userRepository;
     private final TextRepository textRepository;
-    private final ServiceFindFromDatabaseImpl serviceFindFromDatabase;
-    private final ServiceEmailSenderImpl serviceEmailSender;
+    private final EmailSenderServiceImpl serviceEmailSender;
+    private final FindFromDataBaseServiceImpl serviceFindFromDatabase;
+    private final CheckingTheServiceServiceImpl checkingTheServiceService;
 
     private static final String START = "/start";
     private static final String SENDING_AT_MAIL = "Отправить";
@@ -58,7 +62,14 @@ public class TelegramBot extends TelegramLongPollingBot {
 
             if (messageText.contains("/mail")) {
                 String mailFromUser = messageText.substring(messageText.indexOf(" "));
-                letter = ServiceICheckingMailImpl.validateTextFromUser(mailFromUser);
+               /* Integer index = mailFromUser.indexOf("/mail");
+                if (index != -1) {
+                    String textAfterSlashMail = mailFromUser.substring(index + "/mail".length());
+                    if (!textAfterSlashMail.trim().isEmpty()) {
+                        saveEmail(mailFromUser);
+                    }
+                }*/
+                letter = CheckingMailServiceImpl.validateTextFromUser(mailFromUser);
                 if (letter.equals(ConstantsUI.MAIL_VERIFICATION_IS_SUCCESSFULLY)) {
                     saveEmail(mailFromUser);
                 }
@@ -81,9 +92,16 @@ public class TelegramBot extends TelegramLongPollingBot {
                 case SENDING_AT_MAIL:
                     serviceFindFromDatabase.findEmail();
                     serviceFindFromDatabase.findText();
-                    serviceEmailSender.sendToEmail();
-                    messageSuccessfullySendToMail(chatId, update.getMessage()
-                        .getText());
+
+                    if (checkingTheServiceService.checkingDataAcquisitionService() != OK_STATUS) {
+                        serviceEmailSender.sendToEmail();
+                        updateDataMail();
+                        messageSuccessfullySendToMail(chatId, update.getMessage()
+                            .getText());
+
+                    } else {
+                       messageNotSendToEmail(chatId, update.getMessage().getText());
+                    }
                     break;
                 case HEAD_MENU:
                     greetingUsers(chatId, update.getMessage()
@@ -91,10 +109,15 @@ public class TelegramBot extends TelegramLongPollingBot {
                         .getFirstName());
                     break;
                 default:
-                    sendMessage(chatId, "");
+                    sendMessage(chatId, "Простите, кажется я не понимаю команду");
                     break;
             }
         }
+    }
+    protected void updateDataMail() {
+        UserModel.builder()
+            .stateEnum(StateEnum.SUCCESSFULLY_SENT)
+            .build();
     }
 
     protected void saveEmail(String email) {
@@ -158,14 +181,19 @@ public class TelegramBot extends TelegramLongPollingBot {
             "Я помогаю людям отправлять письма на почту не выходя из телеграмма." + "\n" +
             "\n"  + "Вот краткая инструкция :"
             + "\n" + "\n" +
-            "  C помощью команды /mail укажите адрес человека,которому " + "\n"
-            + "    планируете отправить сообщение." +
-            "\n" + "    Например: '/mail ivanov_ivan@gmail.com' ";
+            "C помощью команды /mail укажите адрес человека,которому " + "\n"
+            + "планируете отправить сообщение." +
+            "\n" + "Пример: '/mail ivanov@gmail.com' ";
         sendMessage(chatId, answer);
     }
 
     private void messageSuccessfullySendToMail(Long chatId, String name) {
         String answer = "Ваше письмо было отправлено на указанную почту" ;
+        sendMessage(chatId, answer);
+    }
+
+    private void messageNotSendToEmail(Long chatId, String name) {
+        String answer = "Кажется вы не указали почту и текст для отправки, укажите и попробуйте еще раз.";
         sendMessage(chatId, answer);
     }
 

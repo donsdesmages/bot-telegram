@@ -13,4 +13,7 @@ public class ConstantsUI {
         "Кажется в названии почты была допущена ошибка."
         + "\n" + "Проверьте правильность названия почты и повторите отправку еще раз "
         + "\n"  + "Почта адресата:" + " ";
+
+    public static String OK_STATUS;
+    public static String NO_DATA_SPECIFIED;
 }
