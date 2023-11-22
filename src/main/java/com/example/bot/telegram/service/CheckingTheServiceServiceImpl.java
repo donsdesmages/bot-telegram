@@ -4,8 +4,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-
 import static com.example.bot.telegram.util.ConstantsUI.NO_DATA_SPECIFIED;
 import static com.example.bot.telegram.util.ConstantsUI.OK_STATUS;
 
@@ -17,8 +15,7 @@ public class CheckingTheServiceServiceImpl {
 
     public String checkingDataAcquisitionService() {
         if (fromDataBaseService.findEmail().isEmpty() && fromDataBaseService.findText().isEmpty()) {
-            log.error("the data for sending the email was not specified by the user",
-                LocalDateTime.now().toString());
+            log.error("The data for sending the email was not specified by the user...");
             return NO_DATA_SPECIFIED;
         }
 

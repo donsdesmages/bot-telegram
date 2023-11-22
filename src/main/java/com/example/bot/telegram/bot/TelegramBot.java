@@ -61,18 +61,20 @@ public class TelegramBot extends TelegramLongPollingBot {
             long chatId = update.getMessage().getChatId();
 
             if (messageText.contains("/mail")) {
-                String mailFromUser = messageText.substring(messageText.indexOf(" "));
-               /* Integer index = mailFromUser.indexOf("/mail");
+                Integer index = messageText.indexOf("/mail");
                 if (index != -1) {
-                    String textAfterSlashMail = mailFromUser.substring(index + "/mail".length());
+                    String textAfterSlashMail = messageText.substring(index + "/mail".length());
+
                     if (!textAfterSlashMail.trim().isEmpty()) {
-                        saveEmail(mailFromUser);
+                        String mailFromUser = messageText.substring(messageText.indexOf(" "));
+                        letter = CheckingMailServiceImpl.validateTextFromUser(mailFromUser);
+
+                        if (letter.equals(ConstantsUI.MAIL_VERIFICATION_IS_SUCCESSFULLY)) {
+                            saveEmail(mailFromUser);
+                        }
                     }
-                }*/
-                letter = CheckingMailServiceImpl.validateTextFromUser(mailFromUser);
-                if (letter.equals(ConstantsUI.MAIL_VERIFICATION_IS_SUCCESSFULLY)) {
-                    saveEmail(mailFromUser);
                 }
+
                 sendMessage(chatId, letter);
             }
 
@@ -85,31 +87,35 @@ public class TelegramBot extends TelegramLongPollingBot {
             }
             switch (messageText) {
                 case START:
+
                     startCommandReceived(chatId, update.getMessage()
                         .getChat()
                         .getFirstName());
                     break;
                 case SENDING_AT_MAIL:
+
                     serviceFindFromDatabase.findEmail();
                     serviceFindFromDatabase.findText();
 
-                    if (checkingTheServiceService.checkingDataAcquisitionService() != OK_STATUS) {
+                    if (checkingTheServiceService.checkingDataAcquisitionService() == (OK_STATUS)) {
                         serviceEmailSender.sendToEmail();
                         updateDataMail();
                         messageSuccessfullySendToMail(chatId, update.getMessage()
                             .getText());
 
                     } else {
-                       messageNotSendToEmail(chatId, update.getMessage().getText());
+                       messageNotSendToEmail(chatId, update.getMessage()
+                           .getText());
                     }
                     break;
+
                 case HEAD_MENU:
                     greetingUsers(chatId, update.getMessage()
-                        .getChat()
-                        .getFirstName());
+                        .getChat().getFirstName());
                     break;
                 default:
-                    sendMessage(chatId, "Простите, кажется я не понимаю команду");
+                    sendMessage(chatId, " ");
+
                     break;
             }
         }
@@ -211,7 +217,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
-    public void greetingUsers(Long chatId, String name){
+    public void greetingUsers(Long chatId, String name) {
         String answer =  name + "." + "Вы в главном меню, выберете действия" + "\n" + "" + "" +
             "1. Отправить сообщение" + "\n" + "" + "" +
             "2. Оставить жалобу на сервис";
