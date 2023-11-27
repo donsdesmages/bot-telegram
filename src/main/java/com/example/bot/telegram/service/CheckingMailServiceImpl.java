@@ -2,7 +2,7 @@ package com.example.bot.telegram.service;
 
 import com.example.bot.telegram.exception.BadEmailException;
 import com.example.bot.telegram.util.ConstRegx;
-import com.example.bot.telegram.util.ConstantLogg;
+import com.example.bot.telegram.util.ConstantLog;
 
 import com.example.bot.telegram.util.ConstantsUI;
 import lombok.Builder;
@@ -13,22 +13,21 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 
 import static com.example.bot.telegram.util.ConstantsUI.MAIL_VERIFICATION_IS_SUCCESSFULLY;
-import static com.example.bot.telegram.util.Enum.NOT_EMAIL;
 
 
 @Slf4j
 @Service
 @Builder
 @RequiredArgsConstructor
-public class ServiceICheckingMailImpl {
+public class CheckingMailServiceImpl {
 
     public static String validateTextFromUser(String email) {
 
         try {
            emailValidator(email);
-           log.info(ConstantLogg.DATA_VALID);
+           log.info(ConstantLog.DATA_VALID);
         } catch (BadEmailException e) {
-            log.error(ConstantLogg.EXCEPTION_TEXT_EMAIL);
+            log.error(ConstantLog.EXCEPTION_TEXT_EMAIL);
             return ConstantsUI.NOT_EMAIL + email;
         }
         return MAIL_VERIFICATION_IS_SUCCESSFULLY ;
@@ -41,14 +40,14 @@ public class ServiceICheckingMailImpl {
                 log.info("The message is email...");
                 return true;
             }
-            log.error(ConstantLogg.EMAIL_IS_NOT_VALID
+            log.error(ConstantLog.EMAIL_IS_NOT_VALID
                 + emailStrip
                 + LocalDateTime.now());
 
             throw new BadEmailException();
 
         }
-        log.error(ConstantLogg.EMAIL_IS_NOT_VALID
+        log.error(ConstantLog.EMAIL_IS_NOT_VALID
             + emailStrip
             + LocalDateTime.now());
 

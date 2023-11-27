@@ -20,9 +20,9 @@ import javax.mail.internet.MimeMessage;
 @Slf4j
 @Service
 @AllArgsConstructor
-public class ServiceEmailSenderImpl implements ServiceEmailSender {
+public class EmailSenderServiceImpl implements ServiceEmailSender {
 
-    private final ServiceFindFromDatabaseImpl serviceFindFromDatabase;
+    private final FindFromDataBaseServiceImpl serviceFindFromDatabase;
 
     public void sendToEmail() throws IOException {
 
